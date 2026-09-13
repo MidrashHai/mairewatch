@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>MaireWatch™ — Veille Dr Sylvestre Emmou</title>
+<style>
+:root{font-family:system-ui,-apple-system,"Segoe UI",sans-serif;color:#182018;background:#f5f4f0}*{box-sizing:border-box}body{margin:0}.wrap{max-width:900px;margin:auto;padding:28px 18px}.header{display:flex;justify-content:space-between;gap:16px;align-items:start;border-bottom:1px solid #d3d1c7;padding-bottom:18px;margin-bottom:18px}h1{font-size:24px;margin:0 0 4px}p{margin:0;color:#686860}.status{font-size:13px;padding:7px 10px;border-radius:8px;background:#eaf3de;color:#356312;white-space:nowrap}.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:18px 0}.stat,.card{background:#fff;border:1px solid #d3d1c7;border-radius:12px;padding:16px}.n{font-size:28px;font-weight:700}.l{font-size:12px;color:#686860}.controls{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px}input,select{font:inherit;padding:9px 11px;border:1px solid #b4b2a9;border-radius:8px;background:#fff}input{flex:1;min-width:220px}.alert{background:#fff;border:1px solid #d3d1c7;border-left:5px solid #3b6d11;border-radius:10px;padding:15px;margin:10px 0}.alert.critique{border-left-color:#a32d2d}.alert.modere{border-left-color:#ba7517}.meta{font-size:12px;color:#686860;margin-bottom:6px}.title{font-weight:650;line-height:1.4}.excerpt{margin:8px 0;line-height:1.5;color:#363630}.badge{float:right;font-size:12px;padding:3px 8px;border-radius:8px;background:#eaf3de}.critique .badge{background:#fcebeb;color:#a32d2d}.modere .badge{background:#faeeda;color:#9a5d0b}a{color:#185fa5;font-size:13px}.empty,.error{padding:28px;text-align:center;background:#fff;border:1px dashed #b4b2a9;border-radius:10px;color:#686860}.error{color:#a32d2d}.footer{margin-top:20px;font-size:12px;color:#686860}@media(max-width:560px){.header{display:block}.status{display:inline-block;margin-top:10px}.stats{grid-template-columns:1fr}}
+</style>
+</head>
+<body><main class="wrap">
+<header class="header"><div><h1>MaireWatch™</h1><p>Dr Sylvestre Emmou · Maire de Port-Bouët</p></div><span class="status" id="status">Chargement de la veille…</span></header>
+<section class="stats"><div class="stat"><div class="n" id="total">0</div><div class="l">Alertes affichées</div></div><div class="stat"><div class="n" id="critical">0</div><div class="l">Critiques</div></div><div class="stat"><div class="n" id="updated">—</div><div class="l">Dernière mise à jour</div></div></section>
+<section class="controls"><input id="search" placeholder="Rechercher dans les alertes"><select id="level"><option value="">Tous les niveaux</option><option value="critique">Critique</option><option value="modere">Modéré</option><option value="faible">Faible</option></select><select id="source"><option value="">Toutes les sources</option></select></section>
+<section id="list"><div class="empty">Lecture des données de veille…</div></section>
+<p class="footer">Les alertes proviennent du scénario Make. Actualisation automatique toutes les 60 secondes.</p>
+</main><script>
+let alerts=[];
+const $=id=>document.getElementById(id);
+const norm=s=>String(s||'').toLowerCase();
+function render(){const q=norm($('search').value),level=$('level').value,source=$('source').value;const shown=alerts.filter(a=>(!level||a.niveau===level)&&(!source||a.source===source)&&(!q||norm(a.titre).includes(q)||norm(a.extrait).includes(q)));$('total').textContent=alerts.length;$('critical').textContent=alerts.filter(a=>a.niveau==='critique').length;const sources=[...new Set(alerts.map(a=>a.source).filter(Boolean))];$('source').innerHTML='<option value="">Toutes les sources</option>'+sources.map(s=>'<option>'+escapeHtml(s)+'</option>').join('');$('source').value=source;const list=$('list');if(!shown.length){list.innerHTML='<div class="empty">Aucune alerte ne correspond aux filtres.</div>';return}list.innerHTML=shown.map(a=>'<article class="alert '+escapeHtml(a.niveau||'faible')+'"><span class="badge">'+escapeHtml(label(a.niveau))+'</span><div class="meta">'+escapeHtml([a.date,a.heure,a.source].filter(Boolean).join(' · '))+'</div><div class="title">'+escapeHtml(a.titre)+'</div>'+(a.extrait?'<p class="excerpt">'+escapeHtml(a.extrait)+'</p>':'')+(a.url?'<a target="_blank" rel="noopener" href="'+escapeAttr(a.url)+'">Voir la source</a>':'')+'</article>').join('')}
+function label(v){return({critique:'Critique',modere:'Modéré',faible:'Faible'})[v]||'Information'}
+function escapeHtml(v){return String(v||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+function escapeAttr(v){return /^https?:\/\//i.test(v)?escapeHtml(v):'#'}
+async function load(){try{const r=await fetch('./alertes.json?ts='+Date.now(),{cache:'no-store'});if(!r.ok)throw new Error('Données non disponibles');const data=await r.json();alerts=Array.isArray(data)?data:(data.alerts||[]);const stamp=data.updatedAt||data.updated_at||'';$('updated').textContent=stamp?new Date(stamp).toLocaleString('fr-FR',{dateStyle:'short',timeStyle:'short'}):'—';$('status').textContent='Veille active · '+(stamp?'mise à jour reçue':'aucune date');render()}catch(e){$('status').textContent='Données indisponibles';$('list').innerHTML='<div class="error">Les résultats de Make ne sont pas encore disponibles.</div>'}}
+$('search').addEventListener('input',render);$('level').addEventListener('change',render);$('source').addEventListener('change',render);load();setInterval(load,60000);
+</script></body></html>
